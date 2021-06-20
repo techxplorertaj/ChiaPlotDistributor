@@ -21,14 +21,13 @@ $secondsToSleep = 240
 $taunts = "I'm bored.","Nothing to do.","Ive been waiting for too long.","Are we there yet?","This is really slow.","Feels like forever.","Give me plots.","I need plots now, you slow #$@!$.","I'm going back to bed.","Nothing to see. Nothing to do.","Maybe get a better rig next time?","I can't belive that I woke up for this."
 
 
-$Disk = Get-WmiObject -Class Win32_logicaldisk
-$count = $Disk.Count
-
 $lastTaunt = 0
 
 while($true)
 {
     $filesAtLocation = ($plotLocation + "*.plot")
+
+    $driveFound = $false
 
     $plots = Get-ChildItem -Path $filesAtLocation -Recurse -erroraction SilentlyContinue | Measure-Object -property length -sum
 
@@ -41,21 +40,26 @@ while($true)
         $currentTime = Get-Date -Format "MM/dd/yyyy HH:mm"
         Write-Output ($currentTime + " - GOT ME SOME PLOTS. LETS GO!")
 
+        $Disk = Get-WmiObject -Class Win32_logicaldisk
+        $count = $Disk.Count
+
         for($i=0; $i -lt $count; $i++)
         {
             $device = Write-Output $Disk[$i].DeviceID
-            $free = $Disk[$i].FreeSpace
+            $free = $Disk[$i].FreeSpace 
+            Write-Output ($currentTime + " - Device " + $device + " Is being considered. It has " + [math]::Round($free/1GB) + "GB of free space.")
 
             if($drivesToExclude.Contains($device))
             {
                 $currentTime = Get-Date -Format "MM/dd/yyyy HH:mm"
-                Write-Output ($currentTime + " - Device " + $device + " excluded.")
+                Write-Output ($currentTime + " - Device " + $device + " Excluded.")
                 continue
             }
             else
             {
                 if($free -gt $plotsize)
                 {
+                    $driveFound = $true
                     [console]::beep(500,300)
                     $destination = $device + $plotDestination
 
@@ -85,11 +89,29 @@ while($true)
                 else
                 {
                     $currentTime = Get-Date -Format "MM/dd/yyyy HH:mm"
-                    Write-Output ($currentTime + " - Device " + $device + " ineligible. Insufficient Space")
+                    Write-Output ($currentTime + " - Device " + $device + " Ineligible. Insufficient space.")
                 }
+
+
             }
+
+            
         
         }
+
+        if($driveFound -eq $false)
+        {
+            [console]::beep(500,200)
+            [console]::beep(500,200)
+            [console]::beep(500,200)
+            [console]::beep(500,200)
+            [console]::beep(500,200)
+            [console]::beep(500,200)
+
+            $currentTime = Get-Date -Format "MM/dd/yyyy HH:mm"
+            Write-Output ($currentTime + " - No drives were found with sufficient space to store your plots.")
+        }
+
     }
     else
     {
